@@ -1,0 +1,18 @@
+{
+  "krugerrand_1oz": {
+    "EBAY_FR": ["krugerrand 1 oz or", "krugerrand or 1 once"],
+    "EBAY_US": ["krugerrand 1 oz gold", "south african krugerrand 1 oz"]
+  },
+  "napoleon_20_francs": {
+    "EBAY_FR": ["20 francs or napoleon", "napoléon 20f or"],
+    "EBAY_US": ["20 francs gold napoleon", "french 20 francs gold"]
+  },
+  "maple_leaf_1oz": {
+    "EBAY_FR": ["maple leaf or 1 oz"],
+    "EBAY_US": ["maple leaf 1 oz gold"]
+  },
+  "american_eagle_1oz": {
+    "EBAY_FR": ["american eagle or 1 oz"],
+    "EBAY_US": ["american gold eagle 1 oz"]
+  }
+}

@@ -1,0 +1,3 @@
+ts_utc,coin_id,price,currency,src_url,condition
+2026-02-03T09:05:00Z,krugerrand_1oz,2149.00,EUR,https://www.gold.de/preis/krugerrand-1oz,BU
+2026-02-03T09:05:00Z,napoleon_20_francs,375.00,EUR,https://www.gold.de/preis/20-francs-napoleon,UNC

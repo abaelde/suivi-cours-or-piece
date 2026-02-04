@@ -1,0 +1,6 @@
+ts_utc,coin_id,vendor,price,currency,src_url,condition
+2026-02-02T10:05:00Z,napoleon_20_francs,DemoVendor,390.00,EUR,https://example.com/item/123,UNC
+2026-02-02T16:20:00Z,napoleon_20_francs,DemoVendor,385.00,EUR,https://example.com/item/124,XF
+2026-02-03T10:10:00Z,napoleon_20_francs,DemoVendor,392.00,EUR,https://example.com/item/125,UNC
+2026-02-02T11:00:00Z,krugerrand_1oz,DemoVendorUS,2250.00,USD,https://example.com/item/200,BU
+2026-02-03T11:30:00Z,krugerrand_1oz,DemoVendorUS,2265.00,USD,https://example.com/item/201,BU

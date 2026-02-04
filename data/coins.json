@@ -1,0 +1,74 @@
+[
+  {
+    "id": "napoleon_20_francs",
+    "name": "20 Francs Napoléon III / Marianne Coq",
+    "country": "France",
+    "fineness": 0.900,
+    "weight_total_g": 6.4516,
+    "fine_weight_g": 5.80644,
+    "agw_oz": 0.1867,
+    "years": "1852–1914",
+    "mint": "Paris et autres",
+    "notes": "Type 20F or, valeur refuge européenne classique"
+  },
+  {
+    "id": "sovereign_uk",
+    "name": "Sovereign (UK)",
+    "country": "United Kingdom",
+    "fineness": 0.9167,
+    "weight_total_g": 7.98805,
+    "fine_weight_g": 7.32238,
+    "agw_oz": 0.2354,
+    "years": "1817–",
+    "mint": "The Royal Mint",
+    "notes": "Pièce d’investissement, large liquidité"
+  },
+  {
+    "id": "krugerrand_1oz",
+    "name": "Krugerrand 1 oz",
+    "country": "South Africa",
+    "fineness": 0.9167,
+    "weight_total_g": 33.93,
+    "fine_weight_g": 31.10348,
+    "agw_oz": 1.0,
+    "years": "1967–",
+    "mint": "South African Mint / Rand Refinery",
+    "notes": "1 oz AGW, alliage rouge"
+  },
+  {
+    "id": "maple_leaf_1oz",
+    "name": "Maple Leaf 1 oz",
+    "country": "Canada",
+    "fineness": 0.9999,
+    "weight_total_g": 31.10348,
+    "fine_weight_g": 31.10348,
+    "agw_oz": 1.0,
+    "years": "1979–",
+    "mint": "Royal Canadian Mint",
+    "notes": "Or fin 9999"
+  },
+  {
+    "id": "american_eagle_1oz",
+    "name": "American Gold Eagle 1 oz",
+    "country": "USA",
+    "fineness": 0.9167,
+    "weight_total_g": 33.93,
+    "fine_weight_g": 31.10348,
+    "agw_oz": 1.0,
+    "years": "1986–",
+    "mint": "United States Mint",
+    "notes": "Alliage 22k, 1 oz AGW"
+  },
+  {
+    "id": "peso_mexico_50",
+    "name": "50 Pesos Centenario",
+    "country": "Mexico",
+    "fineness": 0.900,
+    "weight_total_g": 41.666,
+    "fine_weight_g": 37.5,
+    "agw_oz": 1.2057,
+    "years": "1921–1947 (restrikes)",
+    "mint": "Casa de Moneda de México",
+    "notes": "1.2057 oz AGW"
+  }
+]
