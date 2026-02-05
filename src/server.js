@@ -10,10 +10,74 @@ const { loadCsvRows } = require('./lib/spot_csv');
 let searchCoinListings = null;
 try { if (process.env.EBAY_ENABLED === 'true') { ({ searchCoinListings } = require('./connectors/ebay_browse')); } } catch {}
 const goldde = require('./connectors/goldde');
+const aoea = require('./connectors/achat_or_et_argent');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const WEB_DIR = path.join(__dirname, '..', 'web', 'public');
+const AOEA_PRICES_FILE = path.join(DATA_DIR, 'aoea-prices-latest.json');
 loadEnvOnce();
+
+// Cache AOEA (prix pièces + cours) rempli au démarrage, toujours en EUR
+let AOEA_CACHE = null;
+function getAoeaCache() { return AOEA_CACHE; }
+function setAoeaCache(data) { AOEA_CACHE = data; }
+function parseAoeaPriceStr(str) {
+  if (!str || typeof str !== 'string') return null;
+  const m = str.replace(/\s/g, '').replace(',', '.').match(/^([\d.]+)/);
+  return m ? parseFloat(m[1], 10) : null;
+}
+async function refreshAoeaCache() {
+  try {
+    const [coursRes, vitrineRes] = await Promise.all([aoea.fetchCours(), aoea.fetchProductsVitrine()]);
+    const fetchedAt = new Date().toISOString();
+    const date = fetchedAt.slice(0, 10);
+    const cours = (coursRes.values || []).map((c) => ({ ...c, valueg_num: parseAoeaPriceStr(c.valueg) }));
+    const vitrine = vitrineRes.vitrine || [];
+    const payload = { fetched_at: fetchedAt, date, cours, vitrine };
+    setAoeaCache(payload);
+    const outPath = path.join(DATA_DIR, `aoea-prices-${date}.json`);
+    fs.writeFileSync(outPath, JSON.stringify({ ...payload, vitrine: { description: 'Prix des pièces - Nos meilleures ventes', count: vitrine.length, items: vitrine }, cours: { description: 'Cours des métaux', values: coursRes.values } }, null, 2), 'utf-8');
+    fs.writeFileSync(AOEA_PRICES_FILE, JSON.stringify(payload), 'utf-8');
+    console.log('AOEA: prix pièces et cours chargés (' + vitrine.length + ' pièces, ' + cours.length + ' métaux), sauvegardé ' + outPath);
+  } catch (e) {
+    console.warn('AOEA: échec au chargement', e.message);
+    if (fs.existsSync(AOEA_PRICES_FILE)) {
+      try { setAoeaCache(JSON.parse(fs.readFileSync(AOEA_PRICES_FILE, 'utf-8'))); } catch {} 
+    }
+  }
+}
+function getMeltFromAoeaCours(coin, metal = 'or') {
+  const cache = getAoeaCache();
+  if (!cache || !cache.cours || !cache.cours.length) return null;
+  const idMetal = metal === 'argent' ? '2' : '1';
+  const c = cache.cours.find((x) => String(x.id_metal) === idMetal);
+  const valueg = c && (c.valueg_num != null ? c.valueg_num : parseAoeaPriceStr(c.valueg));
+  if (valueg == null) return null;
+  return valueg * (coin.fine_weight_g || 0);
+}
+function getAoeaCoinPricesRows() {
+  const cache = getAoeaCache();
+  if (!cache || !cache.vitrine || !cache.vitrine.length) return [];
+  const coins = loadCoins();
+  const byAoeaId = new Map(coins.filter((c) => c.aoea_id_item != null).map((c) => [c.aoea_id_item, c]));
+  const rows = [];
+  for (const p of cache.vitrine) {
+    const coin = byAoeaId.get(p.id_item);
+    if (!coin) continue;
+    const price = p.prixV_num != null ? p.prixV_num : parseAoeaPriceStr(p.prixV);
+    if (price == null) continue;
+    rows.push({
+      ts_utc: cache.fetched_at,
+      coin_id: coin.id,
+      vendor: 'Achat Or et Argent',
+      price,
+      currency: 'EUR',
+      src_url: p.urlItem || null,
+      condition: null,
+    });
+  }
+  return rows;
+}
 const DEFAULT_CURRENCY = (process.env.DEFAULT_CURRENCY || 'USD').toUpperCase();
 // Provider selection is hard-coded/auto-detected (not via .env):
 // - If xauusd_d.csv exists at repo root → 'csv'
@@ -106,17 +170,9 @@ async function fetchSpotLatest(currency = 'USD') {
 }
 
 function loadCoinPrices() {
-  const p = path.join(__dirname, '..', 'data', 'coin_prices.sample.csv');
-  const rows = parseCSV(fs.readFileSync(p, 'utf-8'));
-  return rows.map(r => ({
-    ts_utc: r.ts_utc,
-    coin_id: r.coin_id,
-    vendor: r.vendor,
-    price: Number(r.price),
-    currency: r.currency,
-    src_url: r.src_url,
-    condition: r.condition || null,
-  }));
+  const aoeaRows = getAoeaCoinPricesRows();
+  if (aoeaRows.length) return aoeaRows;
+  return [];
 }
 
 function filterByTime(rows, fromIso, toIso, key) {
@@ -302,6 +358,12 @@ const server = http.createServer(async (req, res) => {
         if (all.length === 0) all = loadSpotFromFile();
       }
       let rows = filterByTime(all.filter(s => s.currency === currency), from, to, 'ts_utc');
+      let effectiveCurrency = currency;
+      if (rows.length === 0 && all.length > 0) {
+        effectiveCurrency = all[0].currency;
+        rows = filterByTime(all.filter(s => s.currency === effectiveCurrency), from, to, 'ts_utc');
+        res.setHeader('X-Spot-Effective-Currency', effectiveCurrency);
+      }
       if (group === 'day' || group === 'daily') {
         rows = aggregateDaily(rows);
       }
@@ -343,7 +405,12 @@ const server = http.createServer(async (req, res) => {
         sendJSON(res, 200, rows.filter(r => r.currency === currency));
         return;
       }
-      sendJSON(res, 400, { error: 'unknown provider (use provider=goldde|ebay)' });
+      if (provider === 'aoea' || provider === 'achat-or-et-argent') {
+        const { vitrine } = await aoea.fetchProductsVitrine();
+        sendJSON(res, 200, { vendor: 'Achat Or et Argent', vitrine });
+        return;
+      }
+      sendJSON(res, 400, { error: 'unknown provider (use provider=goldde|ebay|aoea)' });
     } catch (e) { sendJSON(res, 500, { error: e.message }); }
     return;
   }
@@ -358,45 +425,54 @@ const server = http.createServer(async (req, res) => {
       const coin = coins.find(c => c.id === coinId);
       if (!coin) return sendJSON(res, 404, { error: 'unknown coin_id' });
 
-      const spotNow = await getSpotNow(currency);
-      if (!spotNow) return sendJSON(res, 503, { error: 'spot unavailable' });
-      const perG = spotNow.price_per_oz / 31.1034768;
-      const melt = perG * coin.fine_weight_g;
+      let priceNow = null;
+      let melt = null;
+      let spotTs = null;
+      let tsPrice = null;
+      let vendorLabel = null;
 
-      let prices = [];
-      // Prefer GOLD.DE if enabled and available
-      if ((process.env.GOLDDE_ENABLED || 'true') === 'true') {
-        try { prices = await goldde.fetchLatestListings(); } catch (e) { console.warn('gold.de fetch failed:', e.message); }
+      if (currency === 'EUR') {
+        const aoeaRows = loadCoinPrices().filter(r => r.coin_id === coinId && r.currency === 'EUR');
+        if (aoeaRows.length) {
+          priceNow = aoeaRows[0].price;
+          tsPrice = aoeaRows[0].ts_utc;
+          vendorLabel = aoeaRows[0].vendor;
+          melt = getMeltFromAoeaCours(coin);
+          if (melt != null) spotTs = getAoeaCache()?.fetched_at || tsPrice;
+        }
       }
-      // Optional: eBay if explicitly enabled
-      if (prices.length === 0 && process.env.EBAY_ENABLED === 'true' && searchCoinListings) {
-        try { prices = await searchCoinListings(coinId, { market, limit: 24, currency }); }
-        catch (e) { console.warn('eBay listings failed:', e.message); }
-      }
-      if (prices.length === 0) {
-        // fallback to latest from CSV in matching currency
-        const rows = loadCoinPrices().filter(r => r.coin_id === coinId && r.currency === currency).sort((a,b)=>a.ts_utc.localeCompare(b.ts_utc));
-        const last = rows[rows.length - 1];
-        if (last) prices = [last];
-      }
-      if (prices.length === 0) return sendJSON(res, 404, { error: 'no prices available' });
 
-      const priceValues = prices.map(p => p.price);
-      const priceNow = median(priceValues) || priceValues[0];
+      if (priceNow == null || melt == null) {
+        const spotNow = await getSpotNow(currency);
+        if (!spotNow) return sendJSON(res, 503, { error: 'spot unavailable' });
+        const perG = spotNow.price_per_oz / 31.1034768;
+        melt = perG * coin.fine_weight_g;
+        spotTs = spotNow.ts_utc;
+        let prices = [];
+        if (currency === 'EUR') prices = loadCoinPrices().filter(r => r.coin_id === coinId && r.currency === 'EUR');
+        if (prices.length === 0 && (process.env.GOLDDE_ENABLED || 'true') === 'true') {
+          try { prices = (await goldde.fetchLatestListings()).filter(p => p.coin_id === coinId && p.currency === currency); } catch (e) {}
+        }
+        if (prices.length === 0 && process.env.EBAY_ENABLED === 'true' && searchCoinListings) {
+          try { prices = await searchCoinListings(coinId, { market, limit: 24, currency }); } catch (e) {}
+        }
+        if (prices.length === 0) return sendJSON(res, 404, { error: 'no prices available' });
+        priceNow = median(prices.map(p => p.price)) || prices[0].price;
+        tsPrice = prices.length === 1 ? prices[0].ts_utc : new Date().toISOString();
+        vendorLabel = prices.length === 1 ? (prices[0].vendor || 'unknown') : `${market} median of ${prices.length}`;
+      }
+
       const premiumPct = melt ? (priceNow / melt - 1) : null;
-      const vendorLabel = prices.length === 1 ? (prices[0].vendor || 'unknown') : `${market} median of ${prices.length}`;
-      const tsPrice = prices.length === 1 ? prices[0].ts_utc : new Date().toISOString();
-
       sendJSON(res, 200, {
         coin_id: coinId,
-        currency,
-        price_now: Number(priceNow.toFixed(2)),
+        currency: currency === 'EUR' && vendorLabel === 'Achat Or et Argent' ? 'EUR' : currency,
+        price_now: Number(Number(priceNow).toFixed(2)),
         melt_now: Number(melt.toFixed(2)),
         premium_now_pct: premiumPct !== null ? Number(premiumPct.toFixed(4)) : null,
-        spot_ts_utc: spotNow.ts_utc,
+        spot_ts_utc: spotTs,
         price_ts_utc: tsPrice,
         vendor: vendorLabel,
-        spot_source: SPOT_MODE,
+        spot_source: vendorLabel === 'Achat Or et Argent' ? 'aoea' : SPOT_MODE,
       });
     } catch (e) { sendJSON(res, 500, { error: e.message }); }
     return;
@@ -424,6 +500,12 @@ const server = http.createServer(async (req, res) => {
       const ebayEnabled = process.env.EBAY_ENABLED === 'true';
       statuses.push({ key: 'ebay', name: 'eBay', enabled: ebayEnabled, configured: ebayEnabled && !!process.env.EBAY_OAUTH_TOKEN, ok: false, last_error: ebayEnabled ? 'not checked' : 'disabled' });
 
+      // Achat Or et Argent (AOEA)
+      const aoeaStatus = { key: 'aoea', name: 'Achat Or et Argent', enabled: true, configured: true };
+      try { const h = await aoea.healthCheck(); aoeaStatus.ok = !!h.ok; aoeaStatus.last_error = h.ok ? null : h.error; }
+      catch (e) { aoeaStatus.ok = false; aoeaStatus.last_error = e.message; }
+      statuses.push(aoeaStatus);
+
       sendJSON(res, 200, statuses);
     } catch (e) { sendJSON(res, 500, { error: e.message }); }
     return;
@@ -448,16 +530,29 @@ const server = http.createServer(async (req, res) => {
         const coin = coinMap.get(r.coin_id);
         if (!coin) continue;
         const cur = (currencyParam === 'AUTO') ? (r.currency || DEFAULT_CURRENCY) : currencyParam;
+        if (cur === 'EUR' && r.vendor === 'Achat Or et Argent') {
+          const meltVal = getMeltFromAoeaCours(coin);
+          if (meltVal != null) {
+            out.push({
+              ts_utc: r.ts_utc,
+              coin_id: r.coin_id,
+              vendor: r.vendor,
+              currency: 'EUR',
+              price: r.price,
+              melt_value: Number(meltVal.toFixed(2)),
+              premium_pct: Number((r.price / meltVal - 1).toFixed(4)),
+              src_url: r.src_url,
+              condition: r.condition,
+            });
+            continue;
+          }
+        }
         let spotRow = nearestSpot(spotRows, r.ts_utc, cur);
-        // With CSV provider, try to fetch missing exact day via API within quota
         if (SPOT_MODE === 'csv') {
           try { spotRow = await ensureSpotForDay(r.ts_utc, cur) || spotRow; } catch {}
         }
         if (!spotRow) {
-          try {
-            const s = await getSpotNow(cur);
-            if (s) spotRow = s;
-          } catch {}
+          try { const s = await getSpotNow(cur); if (s) spotRow = s; } catch {}
         }
         if (!spotRow) continue;
         const calc = computePremium({ tsUtc: spotRow.ts_utc, currency: cur, pricePerOz: spotRow.price_per_oz }, { id: coin.id, name: coin.name, fine_weight_g: coin.fine_weight_g }, r.price);
@@ -487,4 +582,15 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 8787;
 server.listen(PORT, () => {
   console.log(`API v0 on http://localhost:${PORT}`);
   console.log('Front demo: http://localhost:' + PORT + '/');
+  if (fs.existsSync(AOEA_PRICES_FILE)) {
+    try {
+      const loaded = JSON.parse(fs.readFileSync(AOEA_PRICES_FILE, 'utf-8'));
+      if (loaded.vitrine && loaded.cours) {
+        const cours = (loaded.cours || []).map((c) => ({ ...c, valueg_num: c.valueg_num != null ? c.valueg_num : parseAoeaPriceStr(c.valueg) }));
+        setAoeaCache({ ...loaded, cours });
+        console.log('AOEA: cache chargé depuis fichier (' + (loaded.vitrine?.length || 0) + ' pièces)');
+      }
+    } catch (e) {}
+  }
+  refreshAoeaCache();
 });

@@ -33,17 +33,17 @@
     </div>
     <label>Devise</label>
     <select id="currency">
-      <option value="USD" selected>USD</option>
-      <option value="EUR">EUR</option>
+      <option value="USD">USD</option>
+      <option value="EUR" selected>EUR</option>
     </select>
     <span id="spotControls" style="display:flex;gap:8px;align-items:center">
       <label style="margin-left:8px">Période</label>
       <span class="segmented" role="group" aria-label="Période">
-        <button class="range-btn active" data-range="1Y">1A</button>
-        <button class="range-btn" data-range="6M">6M</button>
-        <button class="range-btn" data-range="3M">3M</button>
         <button class="range-btn" data-range="1M">1M</button>
+        <button class="range-btn" data-range="3M">3M</button>
+        <button class="range-btn" data-range="6M">6M</button>
         <button class="range-btn" data-range="YTD">YTD</button>
+        <button class="range-btn active" data-range="1Y">1A</button>
         <button class="range-btn" data-range="5Y">5A</button>
         <button class="range-btn" data-range="10Y">10A</button>
         <button class="range-btn" data-range="MAX">Max</button>
@@ -124,9 +124,15 @@ let coins = [];
 let coinMap = new Map();
 let activeTab = 'spot'; // 'spot' | 'coins'
 
-async function loadSpot(currency, doRefresh){
-  const rows = await fetchJSON(`/spot?currency=${currency}${doRefresh ? '&refresh=1' : ''}`);
-  return rows.map(r => ({ t: r.ts_utc, oz: r.price_per_oz, g: r.price_per_g }));
+async function fetchSpot(currency, doRefresh, fromIso){
+  const qs = new URLSearchParams({ currency, group: 'daily' });
+  if (fromIso) qs.set('from', fromIso);
+  if (doRefresh) qs.set('refresh', '1');
+  const r = await fetch(`/spot?${qs.toString()}`);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const rows = await r.json();
+  const effectiveCurrency = r.headers.get('X-Spot-Effective-Currency') || currency;
+  return { data: rows.map(x => ({ t: x.ts_utc, oz: x.price_per_oz, g: x.price_per_g })), effectiveCurrency };
 }
 
 async function loadPremium(coinId, currency){
@@ -219,13 +225,9 @@ async function render(doRefresh=false){
   const currency = document.getElementById('currency').value;
   if (activeTab === 'spot') {
     const { fromIso } = computeSpotFrom();
-    const qs = new URLSearchParams({ currency, group: 'daily' });
-    if (fromIso) qs.set('from', fromIso);
-    if (doRefresh) qs.set('refresh', '1');
-    const rows = await fetchJSON(`/spot?${qs.toString()}`);
-    const spot = rows.map(r => ({ t: r.ts_utc, oz: r.price_per_oz, g: r.price_per_g }));
-    document.getElementById('spotTitle').textContent = `Spot Or (${currency}/oz)`;
-    spotChart(document.getElementById('spotChart'), spot, currency);
+    const { data: spot, effectiveCurrency } = await fetchSpot(currency, doRefresh, fromIso);
+    document.getElementById('spotTitle').textContent = `Spot Or (${effectiveCurrency}/oz)`;
+    spotChart(document.getElementById('spotChart'), spot, effectiveCurrency);
     return;
   }
 

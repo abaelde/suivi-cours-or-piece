@@ -14,11 +14,11 @@ Objectif: visualiser le cours de l’or et des pièces (prix, prime) dans une in
 
 ## Démarrage rapide (proposé)
 1) Remplir `data/coins.json` si besoin.
-2) Ajouter des points de prix dans `data/coin_prices.sample.csv`.
+2) Les prix des pièces viennent d’Achat Or et Argent au démarrage (plus de sample CSV pour les pièces).
 3) Copier `.env.example` vers `.env`, ne mettre que les clés sensibles (`GOLDAPI_KEY`, etc.) et `DEFAULT_CURRENCY`.
 4) Placez votre CSV historique des cours (`xauusd_d.csv`) à la racine si vous voulez le mode CSV. À défaut, si vous avez des clés API, le mode API sera utilisé. Sinon, un échantillon local est utilisé.
 5) (Optionnel GoldAPI) Remplir l’historique spot: `node scripts/fetch-spot-history.js [--from YYYY-MM-DD] [--currency USD]` → écrit `data/spot.timeseries.json`.
-6) Lancer serveur API: `node src/server.js`. Ouvrir `http://localhost:8787/`.
+6) Lancer le serveur: `node src/server.js`. Au démarrage, appel AOEA (cours + pièces) → sauvegarde `data/aoea-prices-YYYY-MM-DD.json`. Section Pièces en EUR (prix, fonte, prime). Ouvrir `http://localhost:8787/`. Optionnel: `node scripts/fetch-aoea-prices.js` pour sauvegarder les prix du jour à la main.
 
 ## Roadmap courte
 - v0: fichiers statiques + calculs locaux.

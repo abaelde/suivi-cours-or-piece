@@ -9,7 +9,8 @@
     "agw_oz": 0.1867,
     "years": "1852–1914",
     "mint": "Paris et autres",
-    "notes": "Type 20F or, valeur refuge européenne classique"
+    "notes": "Type 20F or, valeur refuge européenne classique",
+    "aoea_id_item": 6
   },
   {
     "id": "sovereign_uk",
@@ -45,7 +46,8 @@
     "agw_oz": 1.0,
     "years": "1979–",
     "mint": "Royal Canadian Mint",
-    "notes": "Or fin 9999"
+    "notes": "Or fin 9999",
+    "aoea_id_item": 3192
   },
   {
     "id": "american_eagle_1oz",

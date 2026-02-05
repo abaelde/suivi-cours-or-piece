@@ -1,0 +1,171 @@
+{
+  "fetched_at": "2026-02-05T18:22:02.167Z",
+  "date": "2026-02-05",
+  "cours": {
+    "description": "Cours des métaux",
+    "values": [
+      {
+        "value": "132 371.00 €",
+        "label": "Or",
+        "id_metal": "1",
+        "veille": "-2.09 %",
+        "classAff": "moins",
+        "valueg": "132.37 €",
+        "valueOnce": "4 117.20 €"
+      },
+      {
+        "value": "2 055.080 €",
+        "label": "Argent",
+        "id_metal": "2",
+        "veille": "-14.42 %",
+        "classAff": "moins",
+        "valueg": "2.055 €",
+        "valueOnce": "63.92 €"
+      },
+      {
+        "value": "55 880.60 €",
+        "label": "Platine",
+        "id_metal": "3",
+        "veille": "-8.34 %",
+        "classAff": "moins",
+        "valueg": "55.88 €",
+        "valueOnce": "1 738.08 €"
+      },
+      {
+        "value": "45 468.90 €",
+        "label": "Palladium",
+        "id_metal": "4",
+        "veille": "-5.55 %",
+        "classAff": "moins",
+        "valueg": "45.47 €",
+        "valueOnce": "1 414.24 €"
+      }
+    ]
+  },
+  "vitrine": {
+    "description": "Prix des pièces - Nos meilleures ventes",
+    "count": 10,
+    "items": [
+      {
+        "id_item": 18860,
+        "nom": "10 Francs Marianne Coq",
+        "prixV": "488.50 €",
+        "prixV_num": 488.5,
+        "currency": "EUR",
+        "prixApartir": null,
+        "prixApartir_num": null,
+        "hasVolumes": false,
+        "urlItem": "https://www.achat-or-et-argent.fr/or/10-francs-marianne-coq/18860",
+        "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/au/thumbs/piece_10_francs_marianne_coq_avers.webp"
+      },
+      {
+        "id_item": 1648,
+        "nom": "Britannia 1 Once Argent",
+        "prixV": "96.60 €",
+        "prixV_num": 96.6,
+        "currency": "EUR",
+        "prixApartir": "95.60 €",
+        "prixApartir_num": 95.6,
+        "hasVolumes": true,
+        "urlItem": "https://www.achat-or-et-argent.fr/argent/britannia-1-once/1648",
+        "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/ag/thumbs/britannia-piece-1oz-argent-2022-1.webp"
+      },
+      {
+        "id_item": 3192,
+        "nom": "Maple Leaf 1 Once Or",
+        "prixV": "4 323.00 €",
+        "prixV_num": 4323,
+        "currency": "EUR",
+        "prixApartir": "4 288.00 €",
+        "prixApartir_num": 4288,
+        "hasVolumes": true,
+        "urlItem": "https://www.achat-or-et-argent.fr/or/maple-leaf-1-once-or/3192",
+        "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/au/thumbs/maple-leaf-1once-or-1.webp"
+      },
+      {
+        "id_item": 3557,
+        "nom": "Lingot 100g Or",
+        "prixV": "13 633.00 €",
+        "prixV_num": 13633,
+        "currency": "EUR",
+        "prixApartir": "13 496.50 €",
+        "prixApartir_num": 13496.5,
+        "hasVolumes": true,
+        "urlItem": "https://www.achat-or-et-argent.fr/or/lingot-100g-or/3557",
+        "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/au/thumbs/lingot-100-g-or-metalor.webp"
+      },
+      {
+        "id_item": 25,
+        "nom": "10 Francs Hercule 1964 - 1973",
+        "prixV": "68.50 €",
+        "prixV_num": 68.5,
+        "currency": "EUR",
+        "prixApartir": "68.10 €",
+        "prixApartir_num": 68.1,
+        "hasVolumes": true,
+        "urlItem": "https://www.achat-or-et-argent.fr/argent/10-francs-hercule-1964-1973/25",
+        "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/ag/thumbs/10-francs-hercule-argent-2.webp"
+      },
+      {
+        "id_item": 49,
+        "nom": "Demi Souverain",
+        "prixV": "606.50 €",
+        "prixV_num": 606.5,
+        "currency": "EUR",
+        "prixApartir": null,
+        "prixApartir_num": null,
+        "hasVolumes": false,
+        "urlItem": "https://www.achat-or-et-argent.fr/or/demi-souverain/49",
+        "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/au/thumbs/demisouveraingeorgesvavers.webp"
+      },
+      {
+        "id_item": 1663,
+        "nom": "Silver Eagle 1 Once",
+        "prixV": "99.10 €",
+        "prixV_num": 99.1,
+        "currency": "EUR",
+        "prixApartir": "98.10 €",
+        "prixApartir_num": 98.1,
+        "hasVolumes": true,
+        "urlItem": "https://www.achat-or-et-argent.fr/argent/silver-eagle-1-once/1663",
+        "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/ag/thumbs/americaneagleargent1.webp"
+      },
+      {
+        "id_item": 6,
+        "nom": "20 Francs Napoléon",
+        "prixV": "807.50 €",
+        "prixV_num": 807.5,
+        "currency": "EUR",
+        "prixApartir": "802.50 €",
+        "prixApartir_num": 802.5,
+        "hasVolumes": true,
+        "urlItem": "https://www.achat-or-et-argent.fr/or/20-francs-napoleon/6",
+        "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/au/thumbs/20francsornapiiilaureeavers.webp"
+      },
+      {
+        "id_item": 3553,
+        "nom": "Lingot 50g Or",
+        "prixV": "6 803.50 €",
+        "prixV_num": 6803.5,
+        "currency": "EUR",
+        "prixApartir": "6 735.00 €",
+        "prixApartir_num": 6735,
+        "hasVolumes": true,
+        "urlItem": "https://www.achat-or-et-argent.fr/or/lingot-50g-or/3553",
+        "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/au/thumbs/lingot-50g-or-metalor.webp"
+      },
+      {
+        "id_item": 23,
+        "nom": "50 Francs Hercule 1974 - 1980",
+        "prixV": "86.10 €",
+        "prixV_num": 86.1,
+        "currency": "EUR",
+        "prixApartir": "85.60 €",
+        "prixApartir_num": 85.6,
+        "hasVolumes": true,
+        "urlItem": "https://www.achat-or-et-argent.fr/argent/50-francs-hercule-1974-1980/23",
+        "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/ag/thumbs/50francsherculerevers.webp"
+      }
+    ]
+  }
+}
