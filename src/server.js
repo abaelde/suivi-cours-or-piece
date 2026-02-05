@@ -6,6 +6,7 @@ const { parseCSV } = require('./lib/csv');
 const { computePremium } = require('./lib/premium');
 const { loadEnvOnce } = require('./lib/env');
 const { goldapiLatest, metalsLatest } = require('./lib/spot_providers');
+const { loadCsvRows } = require('./lib/spot_csv');
 let searchCoinListings = null;
 try { if (process.env.EBAY_ENABLED === 'true') { ({ searchCoinListings } = require('./connectors/ebay_browse')); } } catch {}
 const goldde = require('./connectors/goldde');
@@ -14,8 +15,37 @@ const DATA_DIR = path.join(__dirname, '..', 'data');
 const WEB_DIR = path.join(__dirname, '..', 'web', 'public');
 loadEnvOnce();
 const DEFAULT_CURRENCY = (process.env.DEFAULT_CURRENCY || 'USD').toUpperCase();
-const SPOT_PROVIDER = (process.env.SPOT_PROVIDER || 'file').toLowerCase();
+// Provider selection is hard-coded/auto-detected (not via .env):
+// - If xauusd_d.csv exists at repo root → 'csv'
+// - Else if API keys present → 'api'
+// - Else → 'file' (bundled sample)
+const CSV_DEFAULT_PATH = path.join(__dirname, '..', 'xauusd_d.csv');
+const CSV_DEFAULT_CURRENCY = 'USD';
+function detectSpotMode() {
+  if (fs.existsSync(CSV_DEFAULT_PATH)) return 'csv';
+  if (process.env.GOLDAPI_KEY || process.env.METALS_API_KEY) return 'api';
+  return 'file';
+}
+const SPOT_MODE = detectSpotMode();
+
+// Basic monthly API quota tracking (persisted in data/spot.api.quota.json)
+const SPOT_QUOTA_FILE = path.join(DATA_DIR, 'spot.api.quota.json');
+const SPOT_MONTHLY_LIMIT = 200; // hard-coded monthly calls cap
+function readQuota() {
+  try { return JSON.parse(fs.readFileSync(SPOT_QUOTA_FILE, 'utf-8')); } catch { return { month: null, calls: 0 }; }
+}
+function writeQuota(q) { try { fs.writeFileSync(SPOT_QUOTA_FILE, JSON.stringify(q)); } catch {} }
+function mayCallApi() {
+  const now = new Date();
+  const curMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth()+1).padStart(2,'0')}`;
+  const q = readQuota();
+  if (q.month !== curMonth) { q.month = curMonth; q.calls = 0; }
+  const ok = q.calls < SPOT_MONTHLY_LIMIT;
+  if (ok) { q.calls += 1; writeQuota(q); }
+  return ok;
+}
 const SPOT_CACHE_FILE = path.join(DATA_DIR, 'spot.timeseries.json');
+const SPOT_AUGMENT_FILE = path.join(DATA_DIR, 'spot.csv.augmented.json');
 const SPOT_CACHE_MAX_POINTS = Number(process.env.SPOT_CACHE_MAX_POINTS || 200000);
 
 function sendJSON(res, status, payload) {
@@ -39,6 +69,10 @@ function loadSpotFromFile() {
   return rows.map(r => ({ ts_utc: r.ts_utc, currency: r.currency, price_per_oz: Number(r.price_per_oz), price_per_g: Number(r.price_per_oz) / 31.1034768 }));
 }
 
+function loadSpotFromCsv() {
+  return loadCsvRows(CSV_DEFAULT_PATH, CSV_DEFAULT_CURRENCY);
+}
+
 function readCache() {
   if (!fs.existsSync(SPOT_CACHE_FILE)) return [];
   try { return JSON.parse(fs.readFileSync(SPOT_CACHE_FILE, 'utf-8')); } catch { return [] }
@@ -48,19 +82,27 @@ function writeCache(rows) {
   try { fs.writeFileSync(SPOT_CACHE_FILE, JSON.stringify(rows, null, 2)); } catch {}
 }
 
+function readAugment() {
+  if (!fs.existsSync(SPOT_AUGMENT_FILE)) return [];
+  try { return JSON.parse(fs.readFileSync(SPOT_AUGMENT_FILE, 'utf-8')); } catch { return [] }
+}
+function writeAugment(rows) {
+  try { fs.writeFileSync(SPOT_AUGMENT_FILE, JSON.stringify(rows, null, 2)); } catch {}
+}
+
 async function fetchSpotLatest(currency = 'USD') {
-  const provider = SPOT_PROVIDER;
-  if (provider === 'goldapi') {
+  // Choose the first available API provider based on keys (no .env switch)
+  if (process.env.GOLDAPI_KEY) {
     const key = process.env.GOLDAPI_KEY;
     if (!key) throw new Error('Missing GOLDAPI_KEY');
     return await goldapiLatest(key, currency);
   }
-  if (provider === 'metals') {
+  if (process.env.METALS_API_KEY) {
     const key = process.env.METALS_API_KEY;
     if (!key) throw new Error('Missing METALS_API_KEY');
     return await metalsLatest(key, currency);
   }
-  throw new Error('Unsupported SPOT_PROVIDER: ' + provider);
+  throw new Error('No API provider configured');
 }
 
 function loadCoinPrices() {
@@ -92,6 +134,11 @@ function toUtcDay(tsIso) {
   return `${y}-${m}-${day}`; // YYYY-MM-DD
 }
 
+function yyyymmddFromIso(tsIso) {
+  const day = toUtcDay(tsIso);
+  return day.replace(/-/g, '');
+}
+
 // Reduce arbitrary timestamps to one row per (currency, day): pick last value per day
 function aggregateDaily(rows) {
   const byKey = new Map();
@@ -119,8 +166,17 @@ function nearestSpot(spotRows, ts, currency) {
 }
 
 function getAllSpotRows() {
-  if (SPOT_PROVIDER === 'file') {
+  if (SPOT_MODE === 'file') {
     return loadSpotFromFile();
+  }
+  if (SPOT_MODE === 'csv') {
+    const base = loadSpotFromCsv();
+    const extra = readAugment();
+    const byKey = new Map();
+    for (const r of base.concat(extra)) {
+      byKey.set(`${r.currency}|${r.ts_utc}`, r);
+    }
+    return Array.from(byKey.values()).sort((a,b)=>a.ts_utc.localeCompare(b.ts_utc));
   }
   const cache = readCache();
   if (cache && cache.length) return cache;
@@ -129,17 +185,53 @@ function getAllSpotRows() {
 }
 
 async function getSpotNow(currency) {
-  if (SPOT_PROVIDER === 'file') {
+  if (SPOT_MODE === 'file') {
     const rows = loadSpotFromFile().filter(s => s.currency === currency).sort((a,b)=>a.ts_utc.localeCompare(b.ts_utc));
     return rows[rows.length - 1] || null;
   }
+  if (SPOT_MODE === 'csv') {
+    const rows = loadSpotFromCsv().filter(s => s.currency === currency).sort((a,b)=>a.ts_utc.localeCompare(b.ts_utc));
+    return rows[rows.length - 1] || null;
+  }
   try {
-    const latest = await fetchSpotLatest(currency);
+    // En mode API, respecter la limite mensuelle
+    let latest = null;
+    if (mayCallApi()) {
+      latest = await fetchSpotLatest(currency);
+    } else {
+      throw new Error('monthly API quota exhausted');
+    }
     return { ...latest, price_per_g: latest.price_per_oz / 31.1034768 };
   } catch (e) {
     const cache = readCache().filter(s => s.currency === currency).sort((a,b)=>a.ts_utc.localeCompare(b.ts_utc));
     return cache[cache.length - 1] || null;
   }
+}
+
+async function ensureSpotForDay(tsIso, currency) {
+  const day = toUtcDay(tsIso);
+  const wantTs = day + 'T00:00:00.000Z';
+  const all = getAllSpotRows().filter(r => r.currency === currency);
+  const exact = all.find(r => r.ts_utc === wantTs);
+  if (exact) return exact;
+  // Try GoldAPI historical for missing day, within quota
+  if (process.env.GOLDAPI_KEY && mayCallApi()) {
+    try {
+      const row = await require('./lib/spot_providers').goldapiHistorical(process.env.GOLDAPI_KEY, currency, yyyymmddFromIso(tsIso));
+      const norm = { ts_utc: wantTs, currency, price_per_oz: row.price_per_oz, price_per_g: row.price_per_oz / 31.1034768, source: 'goldapi' };
+      const extra = readAugment();
+      if (!extra.find(r => r.ts_utc === norm.ts_utc && r.currency === norm.currency)) {
+        extra.push(norm);
+        extra.sort((a,b)=>a.ts_utc.localeCompare(b.ts_utc));
+        writeAugment(extra);
+      }
+      return norm;
+    } catch (e) {
+      console.warn('GoldAPI historical fallback failed:', e.message);
+    }
+  }
+  // Fallback to nearest past value from CSV
+  return nearestSpot(all, tsIso, currency);
 }
 
 function median(nums) {
@@ -179,32 +271,36 @@ const server = http.createServer(async (req, res) => {
       const currency = (query.currency || DEFAULT_CURRENCY).toString().toUpperCase();
       const refresh = query.refresh === '1' || query.refresh === 'true';
       const group = (query.group || query.granularity || '').toString().toLowerCase();
+      const from = query.from ? query.from.toString() : null;
+      const to = query.to ? query.to.toString() : null;
       let all = [];
-      if (SPOT_PROVIDER === 'file') {
+      if (SPOT_MODE === 'file') {
         all = loadSpotFromFile();
+      } else if (SPOT_MODE === 'csv') {
+        all = loadSpotFromCsv();
       } else {
-        // read cache, optionally refresh latest
+        // Lire le fichier rempli par scripts/fetch-spot-history.js ; optionnellement mettre à jour le dernier jour
         all = readCache();
         if (refresh || all.length === 0) {
           try {
-            const latest = await fetchSpotLatest(currency);
+            let latest = null;
+            if (mayCallApi()) {
+              latest = await fetchSpotLatest(currency);
+            } else {
+              throw new Error('monthly API quota exhausted');
+            }
             const norm = { ...latest, price_per_g: latest.price_per_oz / 31.1034768 };
-            // append if newer
             if (!all.find(r => r.ts_utc === norm.ts_utc && r.currency === norm.currency)) {
               all.push(norm);
-              // keep a generous bound; default 200k
               all = all.sort((a,b) => a.ts_utc.localeCompare(b.ts_utc)).slice(-SPOT_CACHE_MAX_POINTS);
               writeCache(all);
             }
           } catch (e) {
-            // keep serving cache
             console.warn('Spot refresh failed:', e.message);
           }
         }
         if (all.length === 0) all = loadSpotFromFile();
       }
-      const from = query.from ? query.from.toString() : null;
-      const to = query.to ? query.to.toString() : null;
       let rows = filterByTime(all.filter(s => s.currency === currency), from, to, 'ts_utc');
       if (group === 'day' || group === 'daily') {
         rows = aggregateDaily(rows);
@@ -300,7 +396,7 @@ const server = http.createServer(async (req, res) => {
         spot_ts_utc: spotNow.ts_utc,
         price_ts_utc: tsPrice,
         vendor: vendorLabel,
-        spot_source: SPOT_PROVIDER,
+        spot_source: SPOT_MODE,
       });
     } catch (e) { sendJSON(res, 500, { error: e.message }); }
     return;
@@ -310,7 +406,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const statuses = [];
       // Spot provider
-      const spotStatus = { key: 'spot', name: `Spot (${SPOT_PROVIDER})`, enabled: SPOT_PROVIDER !== 'file', configured: SPOT_PROVIDER !== 'file' };
+      const spotStatus = { key: 'spot', name: `Spot (${SPOT_MODE})`, enabled: SPOT_MODE !== 'file', configured: SPOT_MODE !== 'file' };
       try { const s = await getSpotNow(DEFAULT_CURRENCY); spotStatus.ok = !!s; spotStatus.last_error = s ? null : 'no data'; }
       catch (e) { spotStatus.ok = false; spotStatus.last_error = e.message; }
       statuses.push(spotStatus);
@@ -353,6 +449,10 @@ const server = http.createServer(async (req, res) => {
         if (!coin) continue;
         const cur = (currencyParam === 'AUTO') ? (r.currency || DEFAULT_CURRENCY) : currencyParam;
         let spotRow = nearestSpot(spotRows, r.ts_utc, cur);
+        // With CSV provider, try to fetch missing exact day via API within quota
+        if (SPOT_MODE === 'csv') {
+          try { spotRow = await ensureSpotForDay(r.ts_utc, cur) || spotRow; } catch {}
+        }
         if (!spotRow) {
           try {
             const s = await getSpotNow(cur);

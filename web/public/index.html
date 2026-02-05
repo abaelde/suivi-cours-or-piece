@@ -159,18 +159,34 @@ async function loadVendors(coinId, currency){
 
 function spotChart(el, data, currency){
   const chart = echarts.init(el);
+  const points = data.map(d => [d.t, d.oz]);
+  const fewPoints = points.length <= 20;
   chart.setOption({
     backgroundColor: '#111827',
     textStyle: { color: '#e5e7eb' },
     tooltip: { trigger: 'axis', valueFormatter: v => fmt(v, currency) },
     xAxis: { type: 'time' },
-    yAxis: { type: 'value', name: `${currency}/oz` },
+    yAxis: {
+      type: 'value',
+      name: `${currency}/oz`,
+      scale: true,
+      min: fewPoints ? 'dataMin' : undefined,
+      max: fewPoints ? 'dataMax' : undefined,
+      minInterval: fewPoints ? undefined : null
+    },
     dataZoom: [
       { type: 'inside', throttle: 50 },
       { type: 'slider', height: 24 }
     ],
     toolbox: { feature: { restore: {}, saveAsImage: {} } },
-    series: [{ type: 'line', name: `Spot (${currency}/oz)`, showSymbol:false, sampling: 'lttb', data: data.map(d => [d.t, d.oz]) }]
+    series: [{
+      type: 'line',
+      name: `Spot (${currency}/oz)`,
+      showSymbol: fewPoints,
+      symbolSize: fewPoints ? 8 : 0,
+      sampling: fewPoints ? undefined : 'lttb',
+      data: points
+    }]
   });
 }
 

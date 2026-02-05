@@ -15,11 +15,10 @@ Objectif: visualiser le cours de l’or et des pièces (prix, prime) dans une in
 ## Démarrage rapide (proposé)
 1) Remplir `data/coins.json` si besoin.
 2) Ajouter des points de prix dans `data/coin_prices.sample.csv`.
-3) Copier `.env.example` vers `.env` et définir le provider spot:
-   - `SPOT_PROVIDER=goldapi` et `GOLDAPI_KEY=...` (ou `SPOT_PROVIDER=metals` + `METALS_API_KEY=...`).
-   - `DEFAULT_CURRENCY=USD`.
-4) Lancer serveur API (Node natif): `node src/server.js`.
-5) Ouvrir `http://localhost:8787/` pour le front démo.
+3) Copier `.env.example` vers `.env`, ne mettre que les clés sensibles (`GOLDAPI_KEY`, etc.) et `DEFAULT_CURRENCY`.
+4) Placez votre CSV historique des cours (`xauusd_d.csv`) à la racine si vous voulez le mode CSV. À défaut, si vous avez des clés API, le mode API sera utilisé. Sinon, un échantillon local est utilisé.
+5) (Optionnel GoldAPI) Remplir l’historique spot: `node scripts/fetch-spot-history.js [--from YYYY-MM-DD] [--currency USD]` → écrit `data/spot.timeseries.json`.
+6) Lancer serveur API: `node src/server.js`. Ouvrir `http://localhost:8787/`.
 
 ## Roadmap courte
 - v0: fichiers statiques + calculs locaux.
@@ -29,3 +28,6 @@ Objectif: visualiser le cours de l’or et des pièces (prix, prime) dans une in
 
 node src/server.js
 http://localhost:8787/
+
+
+prix de l'or historique : https://stooq.com/q/d/?f=20000301&t=20260205&s=xauusd&c=0
