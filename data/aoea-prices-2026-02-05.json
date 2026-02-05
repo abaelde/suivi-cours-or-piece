@@ -1,44 +1,44 @@
 {
-  "fetched_at": "2026-02-05T18:22:02.167Z",
+  "fetched_at": "2026-02-05T18:25:00.658Z",
   "date": "2026-02-05",
   "cours": {
     "description": "Cours des métaux",
     "values": [
       {
-        "value": "132 371.00 €",
+        "value": "132 424.00 €",
         "label": "Or",
         "id_metal": "1",
-        "veille": "-2.09 %",
+        "veille": "-2.05 %",
         "classAff": "moins",
-        "valueg": "132.37 €",
-        "valueOnce": "4 117.20 €"
+        "valueg": "132.42 €",
+        "valueOnce": "4 118.85 €"
       },
       {
-        "value": "2 055.080 €",
+        "value": "2 084.030 €",
         "label": "Argent",
         "id_metal": "2",
-        "veille": "-14.42 %",
+        "veille": "-13.21 %",
         "classAff": "moins",
-        "valueg": "2.055 €",
-        "valueOnce": "63.92 €"
+        "valueg": "2.084 €",
+        "valueOnce": "64.82 €"
       },
       {
-        "value": "55 880.60 €",
+        "value": "55 934.60 €",
         "label": "Platine",
         "id_metal": "3",
-        "veille": "-8.34 %",
+        "veille": "-8.25 %",
         "classAff": "moins",
-        "valueg": "55.88 €",
-        "valueOnce": "1 738.08 €"
+        "valueg": "55.93 €",
+        "valueOnce": "1 739.76 €"
       },
       {
-        "value": "45 468.90 €",
+        "value": "45 502.30 €",
         "label": "Palladium",
         "id_metal": "4",
-        "veille": "-5.55 %",
+        "veille": "-5.48 %",
         "classAff": "moins",
-        "valueg": "45.47 €",
-        "valueOnce": "1 414.24 €"
+        "valueg": "45.50 €",
+        "valueOnce": "1 415.28 €"
       }
     ]
   },
@@ -61,11 +61,11 @@
       {
         "id_item": 1648,
         "nom": "Britannia 1 Once Argent",
-        "prixV": "96.60 €",
-        "prixV_num": 96.6,
+        "prixV": "97.90 €",
+        "prixV_num": 97.9,
         "currency": "EUR",
-        "prixApartir": "95.60 €",
-        "prixApartir_num": 95.6,
+        "prixApartir": "96.90 €",
+        "prixApartir_num": 96.9,
         "hasVolumes": true,
         "urlItem": "https://www.achat-or-et-argent.fr/argent/britannia-1-once/1648",
         "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/ag/thumbs/britannia-piece-1oz-argent-2022-1.webp"
@@ -73,11 +73,11 @@
       {
         "id_item": 3192,
         "nom": "Maple Leaf 1 Once Or",
-        "prixV": "4 323.00 €",
-        "prixV_num": 4323,
+        "prixV": "4 324.50 €",
+        "prixV_num": 4324.5,
         "currency": "EUR",
-        "prixApartir": "4 288.00 €",
-        "prixApartir_num": 4288,
+        "prixApartir": "4 289.50 €",
+        "prixApartir_num": 4289.5,
         "hasVolumes": true,
         "urlItem": "https://www.achat-or-et-argent.fr/or/maple-leaf-1-once-or/3192",
         "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/au/thumbs/maple-leaf-1once-or-1.webp"
@@ -85,11 +85,11 @@
       {
         "id_item": 3557,
         "nom": "Lingot 100g Or",
-        "prixV": "13 633.00 €",
-        "prixV_num": 13633,
+        "prixV": "13 638.50 €",
+        "prixV_num": 13638.5,
         "currency": "EUR",
-        "prixApartir": "13 496.50 €",
-        "prixApartir_num": 13496.5,
+        "prixApartir": "13 502.00 €",
+        "prixApartir_num": 13502,
         "hasVolumes": true,
         "urlItem": "https://www.achat-or-et-argent.fr/or/lingot-100g-or/3557",
         "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/au/thumbs/lingot-100-g-or-metalor.webp"
@@ -97,11 +97,11 @@
       {
         "id_item": 25,
         "nom": "10 Francs Hercule 1964 - 1973",
-        "prixV": "68.50 €",
-        "prixV_num": 68.5,
+        "prixV": "69.40 €",
+        "prixV_num": 69.4,
         "currency": "EUR",
-        "prixApartir": "68.10 €",
-        "prixApartir_num": 68.1,
+        "prixApartir": "69.00 €",
+        "prixApartir_num": 69,
         "hasVolumes": true,
         "urlItem": "https://www.achat-or-et-argent.fr/argent/10-francs-hercule-1964-1973/25",
         "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/ag/thumbs/10-francs-hercule-argent-2.webp"
@@ -121,11 +121,11 @@
       {
         "id_item": 1663,
         "nom": "Silver Eagle 1 Once",
-        "prixV": "99.10 €",
-        "prixV_num": 99.1,
+        "prixV": "100.50 €",
+        "prixV_num": 100.5,
         "currency": "EUR",
-        "prixApartir": "98.10 €",
-        "prixApartir_num": 98.1,
+        "prixApartir": "99.40 €",
+        "prixApartir_num": 99.4,
         "hasVolumes": true,
         "urlItem": "https://www.achat-or-et-argent.fr/argent/silver-eagle-1-once/1663",
         "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/ag/thumbs/americaneagleargent1.webp"
@@ -145,11 +145,11 @@
       {
         "id_item": 3553,
         "nom": "Lingot 50g Or",
-        "prixV": "6 803.50 €",
-        "prixV_num": 6803.5,
+        "prixV": "6 806.00 €",
+        "prixV_num": 6806,
         "currency": "EUR",
-        "prixApartir": "6 735.00 €",
-        "prixApartir_num": 6735,
+        "prixApartir": "6 737.50 €",
+        "prixApartir_num": 6737.5,
         "hasVolumes": true,
         "urlItem": "https://www.achat-or-et-argent.fr/or/lingot-50g-or/3553",
         "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/au/thumbs/lingot-50g-or-metalor.webp"
@@ -157,11 +157,11 @@
       {
         "id_item": 23,
         "nom": "50 Francs Hercule 1974 - 1980",
-        "prixV": "86.10 €",
-        "prixV_num": 86.1,
+        "prixV": "87.30 €",
+        "prixV_num": 87.3,
         "currency": "EUR",
-        "prixApartir": "85.60 €",
-        "prixApartir_num": 85.6,
+        "prixApartir": "86.80 €",
+        "prixApartir_num": 86.8,
         "hasVolumes": true,
         "urlItem": "https://www.achat-or-et-argent.fr/argent/50-francs-hercule-1974-1980/23",
         "image1": "https://cdn.achat-or-et-argent.fr/ressources_v4/images/pieces/ag/thumbs/50francsherculerevers.webp"

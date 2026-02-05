@@ -322,6 +322,35 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (pathname === '/coins/summary' && req.method === 'GET') {
+    try {
+      const currency = (query.currency || 'EUR').toString().toUpperCase();
+      const coins = loadCoins();
+      const aoeaRows = loadCoinPrices().filter(r => r.currency === currency);
+      const byCoinId = new Map(aoeaRows.map(r => [r.coin_id, r]));
+      const out = coins.map((coin) => {
+        const r = byCoinId.get(coin.id);
+        if (!r) {
+          return { coin_id: coin.id, name: coin.name, price_now: null, melt_now: null, premium_now_pct: null, vendor: null, currency, has_data: false };
+        }
+        const melt = getMeltFromAoeaCours(coin);
+        const premiumPct = melt != null ? r.price / melt - 1 : null;
+        return {
+          coin_id: coin.id,
+          name: coin.name,
+          price_now: r.price,
+          melt_now: melt,
+          premium_now_pct: premiumPct,
+          vendor: r.vendor,
+          currency,
+          has_data: true,
+        };
+      });
+      sendJSON(res, 200, out);
+    } catch (e) { sendJSON(res, 500, { error: e.message }); }
+    return;
+  }
+
   if (pathname === '/spot' && req.method === 'GET') {
     try {
       const currency = (query.currency || DEFAULT_CURRENCY).toString().toUpperCase();

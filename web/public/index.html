@@ -21,6 +21,14 @@
     .segmented button{border:0;border-right:1px solid #374151;background:#0f172a;color:#e5e7eb;padding:6px 10px}
     .segmented button:last-child{border-right:0}
     .segmented button.active{background:#334155}
+    .coins-grid{overflow-x:auto}
+    .coins-grid table{width:100%;border-collapse:collapse;font-size:14px}
+    .coins-grid th,.coins-grid td{padding:10px 12px;text-align:left;border-bottom:1px solid #374151}
+    .coins-grid th{opacity:.85;font-weight:600}
+    .coins-grid tr:hover{background:#1f2937}
+    .coins-grid .no-data{opacity:.5}
+    .coins-grid .prime-pos{color:#34d399}
+    .coins-grid .prime-neg{color:#f87171}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 </head>
@@ -49,12 +57,6 @@
         <button class="range-btn" data-range="MAX">Max</button>
       </span>
     </span>
-    <span id="coinControls">
-      <label style="margin-left:8px">Pièce</label>
-      <select id="coin"></select>
-      <label style="margin-left:8px">Vendeur</label>
-      <select id="vendor"></select>
-    </span>
     <button id="refresh">Rafraîchir</button>
     <div id="providers" style="margin-left:auto;display:flex;gap:8px"></div>
   </header>
@@ -68,28 +70,8 @@
 
   <div id="tabCoins" class="row hidden" role="tabpanel" aria-labelledby="tabBtnCoins">
     <div class="card" style="flex: 1 1 100%">
-      <h3 style="margin:0 0 8px">Vue instantanée</h3>
-      <div id="now" style="display:flex;gap:24px;flex-wrap:wrap">
-        <div>
-          <div style="opacity:.7">Prix actuel</div>
-          <div id="nowPrice" style="font-size:28px">—</div>
-          <div id="nowVendor" style="opacity:.7;font-size:12px">—</div>
-        </div>
-        <div>
-          <div style="opacity:.7">Valeur de fonte</div>
-          <div id="nowMelt" style="font-size:28px">—</div>
-          <div id="nowSpotTs" style="opacity:.7;font-size:12px">—</div>
-        </div>
-        <div>
-          <div style="opacity:.7">Prime</div>
-          <div id="nowPremium" style="font-size:28px">—</div>
-          <div id="nowPriceTs" style="opacity:.7;font-size:12px">—</div>
-        </div>
-      </div>
-    </div>
-    <div class="card">
-      <h3 id="coinTitle" style="margin:0 0 8px">Pièce — Prix vs Fonte/Prime</h3>
-      <div id="coinChart"></div>
+      <h3 style="margin:0 0 12px">Pièces — Prix actuel, valeur de fonte, prime</h3>
+      <div id="coinsGrid" class="coins-grid"></div>
     </div>
   </div>
 
@@ -143,24 +125,17 @@ async function loadPremium(coinId, currency){
 async function loadCoins(){
   coins = await fetchJSON('/coins');
   coinMap = new Map(coins.map(c => [c.id, c]));
-  const sel = document.getElementById('coin');
-  sel.innerHTML = '';
-  for (const c of coins) {
-    const opt = document.createElement('option');
-    opt.value = c.id; opt.textContent = c.name;
-    sel.appendChild(opt);
-  }
-  const def = coins.find(c => c.id.includes('krugerrand'))?.id || coins[0]?.id;
-  if (def) sel.value = def;
 }
 
-async function loadVendors(coinId, currency){
-  const rows = await fetchJSON(`/prices?coin_id=${encodeURIComponent(coinId)}`);
-  const vendors = Array.from(new Set(rows.filter(r => r.currency === currency).map(r => r.vendor)));
-  const sel = document.getElementById('vendor');
-  sel.innerHTML = '';
-  const all = document.createElement('option'); all.value = ''; all.textContent = 'Tous vendeurs'; sel.appendChild(all);
-  for (const v of vendors) { const opt = document.createElement('option'); opt.value = v; opt.textContent = v; sel.appendChild(opt); }
+async function loadCoinsSummary(currency){
+  return fetchJSON(`/coins/summary?currency=${encodeURIComponent(currency)}`);
+}
+
+function escapeHtml(s){
+  if (s == null) return '';
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
 }
 
 function spotChart(el, data, currency){
@@ -196,22 +171,6 @@ function spotChart(el, data, currency){
   });
 }
 
-function coinChart(el, series){
-  const chart = echarts.init(el);
-  const seriesCurrency = series[0]?.currency || 'USD';
-  chart.setOption({
-    backgroundColor: '#111827', textStyle: { color: '#e5e7eb' }, tooltip: { trigger: 'axis' },
-    legend: { data: ['Prix', 'Fonte', 'Prime %'] },
-    xAxis: [{ type: 'time' }],
-    yAxis: [{ type: 'value', name: seriesCurrency }, { type: 'value', name: 'Prime %', position: 'right' }],
-    series: [
-      { type: 'line', name: 'Prix', showSymbol:false, data: series.map(r => [r.t, r.price]) },
-      { type: 'line', name: 'Fonte', showSymbol:false, data: series.map(r => [r.t, r.melt]) },
-      { type: 'line', name: 'Prime %', yAxisIndex: 1, showSymbol:false, data: series.map(r => [r.t, (r.prem*100).toFixed(2)]) }
-    ]
-  });
-}
-
 function fmt(n, currency){
   try { return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(n); } catch { return String(n); }
 }
@@ -231,55 +190,44 @@ async function render(doRefresh=false){
     return;
   }
 
-  // coins tab
-  const coinId = document.getElementById('coin').value;
-  await loadVendors(coinId, currency);
-  const vendor = document.getElementById('vendor').value;
-
-  let prem = await loadPremium(coinId, currency);
-  if (prem.length === 0 && currency === 'USD') {
-    prem = await loadPremium(coinId, 'AUTO');
+  // coins tab — grille de toutes les pièces
+  const summary = await loadCoinsSummary(currency);
+  const gridEl = document.getElementById('coinsGrid');
+  gridEl.innerHTML = '';
+  const table = document.createElement('table');
+  table.setAttribute('role', 'table');
+  table.innerHTML = `<thead><tr><th>Pièce</th><th>Prix actuel</th><th>Valeur de fonte</th><th>Prime</th><th>Vendeur</th></tr></thead><tbody></tbody>`;
+  const tbody = table.querySelector('tbody');
+  const cur = summary[0]?.currency || currency;
+  for (const row of summary) {
+    const tr = document.createElement('tr');
+    if (!row.has_data) tr.classList.add('no-data');
+    const priceCell = row.has_data ? fmt(row.price_now, cur) : '—';
+    const meltCell = row.melt_now != null ? fmt(row.melt_now, cur) : '—';
+    let primeCell = '—';
+    let primeClass = '';
+    if (row.premium_now_pct != null) {
+      primeCell = (row.premium_now_pct * 100).toFixed(2) + ' %';
+      primeClass = row.premium_now_pct >= 0 ? 'prime-pos' : 'prime-neg';
+    }
+    const vendorCell = row.vendor || '—';
+    tr.innerHTML = `<td>${escapeHtml(row.name)}</td><td>${priceCell}</td><td>${meltCell}</td><td class="${primeClass}">${primeCell}</td><td>${escapeHtml(vendorCell)}</td>`;
+    tbody.appendChild(tr);
   }
-  const premFiltered = vendor ? prem.filter(r => r.vendor === vendor) : prem;
-  const displayCurrency = premFiltered[0]?.currency || currency;
-  document.getElementById('coinTitle').textContent = `${coinMap.get(coinId)?.name || 'Pièce'} — Prix vs Fonte/Prime (${displayCurrency})`;
-  coinChart(document.getElementById('coinChart'), premFiltered);
-
-  const latestPrice = premFiltered.slice().sort((a,b) => a.t.localeCompare(b.t)).slice(-1)[0];
-  const nowPriceEl = document.getElementById('nowPrice');
-  const nowVendorEl = document.getElementById('nowVendor');
-  const nowMeltEl = document.getElementById('nowMelt');
-  const nowPremEl = document.getElementById('nowPremium');
-  const nowSpotTs = document.getElementById('nowSpotTs');
-  const nowPriceTs = document.getElementById('nowPriceTs');
-  if (!latestPrice) {
-    nowPriceEl.textContent = '—'; nowVendorEl.textContent = 'Aucun prix dans cette devise';
-    nowMeltEl.textContent = '—'; nowPremEl.textContent = '—'; nowSpotTs.textContent='—'; nowPriceTs.textContent='—';
-  } else {
-    const melt = latestPrice.melt;
-    const premiumPct = latestPrice.prem;
-    const cur = latestPrice.currency || currency;
-    nowPriceEl.textContent = fmt(latestPrice.price, cur);
-    nowVendorEl.textContent = `${latestPrice.vendor || '—'} · prix: ${new Date(latestPrice.t).toLocaleString()}`;
-    nowMeltEl.textContent = fmt(melt, cur);
-    nowPremEl.textContent = `${(premiumPct*100).toFixed(2)} %`;
-    nowPremEl.style.color = premiumPct >= 0 ? '#34d399' : '#f87171';
-    nowSpotTs.textContent = `spot: utilisé pour calculer la fonte`;
-    nowPriceTs.textContent = `calculé vs spot`;
-  }
+  gridEl.appendChild(table);
 }
 
 function setTab(tab){
   activeTab = tab;
   const tabSpot = document.getElementById('tabSpot');
   const tabCoins = document.getElementById('tabCoins');
-  const coinControls = document.getElementById('coinControls');
   const btnSpot = document.getElementById('tabBtnSpot');
   const btnCoins = document.getElementById('tabBtnCoins');
+  const spotControls = document.getElementById('spotControls');
   const onSpot = tab === 'spot';
   tabSpot.classList.toggle('hidden', !onSpot);
   tabCoins.classList.toggle('hidden', onSpot);
-  coinControls.classList.toggle('hidden', onSpot);
+  if (spotControls) spotControls.style.display = onSpot ? 'flex' : 'none';
   btnSpot.classList.toggle('active', onSpot);
   btnCoins.classList.toggle('active', !onSpot);
   btnSpot.setAttribute('aria-selected', onSpot ? 'true' : 'false');
@@ -320,8 +268,6 @@ async function boot(){
   document.getElementById('tabBtnSpot').addEventListener('click', () => setTab('spot'));
   document.getElementById('tabBtnCoins').addEventListener('click', () => setTab('coins'));
   document.querySelectorAll('.range-btn').forEach(btn => btn.addEventListener('click', () => selectRange(btn.dataset.range)));
-  document.getElementById('coin').addEventListener('change', () => activeTab==='coins' && render(false));
-  document.getElementById('vendor').addEventListener('change', () => activeTab==='coins' && render(false));
   document.getElementById('currency').addEventListener('change', () => render(false));
   document.getElementById('refresh').addEventListener('click', () => render(true));
   // Démarre sur l'onglet Spot
